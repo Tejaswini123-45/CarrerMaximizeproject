@@ -3,12 +3,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { MessageSquare, ThumbsUp, ThumbsDown, AlertTriangle, ChevronLeft, ChevronRight, CheckCircle, Award } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ThumbsUp, ThumbsDown, AlertCircle, CheckCircle2, MessageSquare, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 
+// Define types
 interface Question {
   id: string;
   text: string;
@@ -16,531 +18,396 @@ interface Question {
 }
 
 interface AnswerFeedback {
-  strengths: string[];
-  weaknesses: string[];
-  suggestions: string[];
   score: number;
+  strengths: string[];
+  improvements: string[];
+  suggestions: string[];
+}
+
+interface AnsweredQuestion {
+  questionId: string;
+  answer: string;
+  feedback: AnswerFeedback | null;
 }
 
 const PracticeAnswers = () => {
   const navigate = useNavigate();
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answer, setAnswer] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
-  const [answeredQuestions, setAnsweredQuestions] = useState<Record<string, { answer: string; feedback: AnswerFeedback }>>({});
-  const [averageScore, setAverageScore] = useState(0);
-  const [practiceCompleted, setPracticeCompleted] = useState(false);
-  
+  const [answeredQuestions, setAnsweredQuestions] = useState<AnsweredQuestion[]>([]);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [currentFeedback, setCurrentFeedback] = useState<AnswerFeedback | null>(null);
+  const [overallScore, setOverallScore] = useState<number | null>(null);
+
   useEffect(() => {
-    // Get questions from localStorage
+    // Check if questions have been generated
     const storedQuestions = localStorage.getItem("generatedQuestions");
     if (!storedQuestions) {
       toast.error("No questions found. Please generate questions first.");
       navigate("/skill-questions");
       return;
     }
-    
+
     setQuestions(JSON.parse(storedQuestions));
-    
-    // Get previously answered questions
-    const storedAnswers = localStorage.getItem("practiceAnswers");
-    if (storedAnswers) {
-      const parsedAnswers = JSON.parse(storedAnswers);
-      setAnsweredQuestions(parsedAnswers);
-      
-      // Calculate average score
-      const scores = Object.values(parsedAnswers).map((item: any) => item.feedback.score);
-      if (scores.length > 0) {
-        const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-        setAverageScore(Math.round(avg));
-        
-        // Mark as completed if all questions answered
-        const parsed = JSON.parse(storedQuestions);
-        if (Object.keys(parsedAnswers).length === parsed.length) {
-          setPracticeCompleted(true);
-        }
-      }
+
+    // Check if there are already saved answers
+    const savedAnswers = localStorage.getItem("answeredQuestions");
+    if (savedAnswers) {
+      setAnsweredQuestions(JSON.parse(savedAnswers));
+    }
+
+    // Check if there's a practice score
+    const savedScore = localStorage.getItem("practiceScore");
+    if (savedScore) {
+      setOverallScore(parseInt(savedScore));
     }
   }, [navigate]);
+
+  const currentQuestion = questions[currentQuestionIndex];
   
-  const currentQuestion = questions[currentIndex];
+  // Check if the current question has been answered
+  const findAnsweredQuestion = () => {
+    if (!currentQuestion) return null;
+    return answeredQuestions.find(q => q.questionId === currentQuestion.id);
+  };
   
+  const answeredQuestion = findAnsweredQuestion();
+
   const evaluateAnswer = async () => {
     if (!answer.trim()) {
-      toast.error("Please enter your answer");
+      toast.error("Please provide an answer before submitting");
       return;
     }
     
     setIsEvaluating(true);
-    setProgress(0);
-    
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        const newProgress = prev + Math.random() * 20;
-        return newProgress >= 100 ? 100 : newProgress;
-      });
-    }, 300);
     
     try {
       // In a real app, you would make an API call to evaluate the answer
       // For this demo, we'll simulate with a timeout
       await new Promise((resolve) => setTimeout(resolve, 2000));
       
-      // Generate random feedback based on the question category
-      let mockFeedback: AnswerFeedback;
+      // Generate mock feedback
+      const mockFeedback: AnswerFeedback = {
+        score: Math.floor(Math.random() * 31) + 70, // Random score between 70-100
+        strengths: [
+          "Good articulation of your experience",
+          "Provided specific examples to support your points",
+          "Demonstrated problem-solving skills"
+        ],
+        improvements: [
+          "Could be more concise in some areas",
+          "Add more quantifiable results when possible",
+          "More emphasis on what you learned from the experience"
+        ],
+        suggestions: [
+          "Use the STAR method (Situation, Task, Action, Result) more explicitly",
+          "Highlight your unique contributions more clearly",
+          "Connect your answer more directly to the role you're targeting"
+        ]
+      };
       
-      const randomScore = Math.floor(Math.random() * 41) + 60; // Random score between 60-100
+      setCurrentFeedback(mockFeedback);
+      setFeedbackVisible(true);
       
-      if (currentQuestion.category === "Technical") {
-        mockFeedback = {
-          strengths: [
-            "Good technical explanation of concepts",
-            "Clear logical structure to your answer"
-          ],
-          weaknesses: [
-            "Could provide more specific examples",
-            "Technical terminology could be more precise"
-          ],
-          suggestions: [
-            "Include real-world examples of how you've applied these skills",
-            "Elaborate on your problem-solving methodology",
-            "Quantify the impact of your technical solutions when possible"
-          ],
-          score: randomScore
-        };
-      } else if (currentQuestion.category === "Behavioral") {
-        mockFeedback = {
-          strengths: [
-            "Good use of the STAR method in your response",
-            "Demonstrated self-awareness and learning from the situation"
-          ],
-          weaknesses: [
-            "Could provide more details about your specific actions",
-            "The outcome description could be more substantial"
-          ],
-          suggestions: [
-            "Be more specific about your personal contributions",
-            "Include what you learned from the experience",
-            "Quantify the results where possible"
-          ],
-          score: randomScore
+      // Save the answered question
+      const updatedAnsweredQuestions = [...answeredQuestions];
+      const existingIndex = updatedAnsweredQuestions.findIndex(
+        q => q.questionId === currentQuestion.id
+      );
+      
+      if (existingIndex >= 0) {
+        updatedAnsweredQuestions[existingIndex] = {
+          questionId: currentQuestion.id,
+          answer,
+          feedback: mockFeedback
         };
       } else {
-        mockFeedback = {
-          strengths: [
-            "Well-structured and coherent response",
-            "Good balance of details and conciseness"
-          ],
-          weaknesses: [
-            "Answer could be more tailored to showcase relevant skills",
-            "Some statements would benefit from supporting examples"
-          ],
-          suggestions: [
-            "Incorporate industry-specific terminology",
-            "Connect your experience more directly to the job requirements",
-            "Consider adding a brief summary statement at the end"
-          ],
-          score: randomScore
-        };
+        updatedAnsweredQuestions.push({
+          questionId: currentQuestion.id,
+          answer,
+          feedback: mockFeedback
+        });
       }
       
-      setFeedback(mockFeedback);
+      setAnsweredQuestions(updatedAnsweredQuestions);
+      localStorage.setItem("answeredQuestions", JSON.stringify(updatedAnsweredQuestions));
       
-      // Update answered questions
-      const updatedAnswers = {
-        ...answeredQuestions,
-        [currentQuestion.id]: { answer, feedback: mockFeedback }
-      };
-      setAnsweredQuestions(updatedAnswers);
-      
-      // Calculate new average score
-      const scores = Object.values(updatedAnswers).map(item => item.feedback.score);
-      const newAverage = scores.reduce((a, b) => a + b, 0) / scores.length;
-      setAverageScore(Math.round(newAverage));
-      
-      // Save to localStorage
-      localStorage.setItem("practiceAnswers", JSON.stringify(updatedAnswers));
-      localStorage.setItem("practiceScore", newAverage.toString());
-      
-      // Check if all questions have been answered
-      if (Object.keys(updatedAnswers).length === questions.length) {
-        setPracticeCompleted(true);
+      // Update overall score
+      const answeredWithFeedback = updatedAnsweredQuestions.filter(q => q.feedback);
+      if (answeredWithFeedback.length > 0) {
+        const totalScore = answeredWithFeedback.reduce(
+          (sum, q) => sum + (q.feedback?.score || 0), 
+          0
+        );
+        const avgScore = Math.round(totalScore / answeredWithFeedback.length);
+        setOverallScore(avgScore);
+        localStorage.setItem("practiceScore", avgScore.toString());
       }
+      
+      toast.success("Answer evaluated successfully!");
     } catch (error) {
       toast.error("Failed to evaluate answer. Please try again.");
       console.error("Evaluation error:", error);
     } finally {
-      clearInterval(progressInterval);
-      setProgress(100);
       setIsEvaluating(false);
     }
   };
   
   const goToNextQuestion = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
       setAnswer("");
-      setFeedback(null);
-      
-      // If the next question has already been answered, show the previous answer and feedback
-      const nextQuestionId = questions[currentIndex + 1].id;
-      if (answeredQuestions[nextQuestionId]) {
-        setAnswer(answeredQuestions[nextQuestionId].answer);
-        setFeedback(answeredQuestions[nextQuestionId].feedback);
-      }
-    } else {
-      // All questions answered
-      setPracticeCompleted(true);
+      setFeedbackVisible(false);
+      setCurrentFeedback(null);
     }
   };
   
   const goToPreviousQuestion = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
       setAnswer("");
-      setFeedback(null);
-      
-      // If the previous question has already been answered, show the previous answer and feedback
-      const prevQuestionId = questions[currentIndex - 1].id;
-      if (answeredQuestions[prevQuestionId]) {
-        setAnswer(answeredQuestions[prevQuestionId].answer);
-        setFeedback(answeredQuestions[prevQuestionId].feedback);
-      }
+      setFeedbackVisible(false);
+      setCurrentFeedback(null);
     }
   };
   
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-career-accent";
-    if (score >= 70) return "text-career-warning";
+  const resetPractice = () => {
+    localStorage.removeItem("answeredQuestions");
+    localStorage.removeItem("practiceScore");
+    setAnsweredQuestions([]);
+    setOverallScore(null);
+    setCurrentQuestionIndex(0);
+    setAnswer("");
+    setFeedbackVisible(false);
+    setCurrentFeedback(null);
+    toast.success("Practice session reset successfully");
+  };
+  
+  const scoreColor = (score: number) => {
+    if (score >= 90) return "text-career-accent";
+    if (score >= 80) return "text-career-primary";
+    if (score >= 70) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
     return "text-career-danger";
   };
   
-  const getScoreBadge = (score: number) => {
-    if (score >= 80) return "score-high";
-    if (score >= 70) return "score-medium";
-    return "score-low";
-  };
-  
-  if (questions.length === 0) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-[70vh]">
-          <MessageSquare className="h-16 w-16 text-gray-300 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">No Questions Available</h2>
-          <p className="text-muted-foreground mb-6">You need to generate questions before practicing answers.</p>
-          <Button 
-            className="bg-career-primary hover:bg-career-primary/90"
-            onClick={() => navigate("/skill-questions")}
-          >
-            Go to Question Generator
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
-  
-  if (practiceCompleted) {
-    return (
-      <DashboardLayout>
-        <div className="animate-fade-in">
-          <h1 className="text-2xl font-bold text-career-primary mb-6">Practice Completed!</h1>
-          
-          <Card className="mb-8">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl">Your Performance Summary</CardTitle>
-                <div className={`${getScoreBadge(averageScore)} px-3 py-1`}>
-                  <span className="font-bold">{averageScore}%</span>
-                </div>
-              </div>
-              <CardDescription>
-                You have practiced answering {questions.length} interview questions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="py-4 flex justify-center">
-                <div className="relative w-40 h-40">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Award className={`h-20 w-20 ${getScoreColor(averageScore)}`} />
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center mt-16">
-                    <span className={`text-2xl font-bold ${getScoreColor(averageScore)}`}>{averageScore}%</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <Card>
-                  <CardContent className="p-4 flex flex-col items-center">
-                    <div className="bg-career-primary/10 p-3 rounded-full mb-2">
-                      <MessageSquare className="h-5 w-5 text-career-primary" />
-                    </div>
-                    <span className="text-2xl font-bold">{questions.length}</span>
-                    <span className="text-sm text-muted-foreground">Questions Answered</span>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4 flex flex-col items-center">
-                    <div className="bg-career-accent/10 p-3 rounded-full mb-2">
-                      <ThumbsUp className="h-5 w-5 text-career-accent" />
-                    </div>
-                    <span className="text-2xl font-bold">
-                      {Object.values(answeredQuestions).filter(a => a.feedback.score >= 80).length}
-                    </span>
-                    <span className="text-sm text-muted-foreground">Strong Answers</span>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4 flex flex-col items-center">
-                    <div className="bg-career-warning/10 p-3 rounded-full mb-2">
-                      <AlertTriangle className="h-5 w-5 text-career-warning" />
-                    </div>
-                    <span className="text-2xl font-bold">
-                      {Object.values(answeredQuestions).filter(a => a.feedback.score < 80).length}
-                    </span>
-                    <span className="text-sm text-muted-foreground">Needs Improvement</span>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() => navigate("/company-questions")}
-              >
-                Try Company-Specific Questions
-              </Button>
-              <Button
-                className="bg-career-primary hover:bg-career-primary/90"
-                onClick={() => {
-                  setCurrentIndex(0);
-                  setPracticeCompleted(false);
-                }}
-              >
-                Review Your Answers
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <h2 className="text-xl font-semibold mb-4">Performance by Question Type</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {["Technical", "Behavioral", "Experience", "Situational"].map(category => {
-              const categoryQuestions = Object.entries(answeredQuestions).filter(
-                ([id]) => questions.find(q => q.id === id)?.category === category
-              );
-              
-              if (categoryQuestions.length === 0) return null;
-              
-              const categoryScores = categoryQuestions.map(([, data]) => data.feedback.score);
-              const avgScore = categoryScores.reduce((a, b) => a + b, 0) / categoryScores.length;
-              
-              return (
-                <Card key={category}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-lg">{category} Questions</CardTitle>
-                      <div className={`${getScoreBadge(avgScore)} px-2 py-0.5`}>
-                        <span className="text-sm font-medium">{Math.round(avgScore)}%</span>
-                      </div>
-                    </div>
-                    <CardDescription>
-                      {categoryQuestions.length} questions in this category
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Performance</span>
-                        <span className={getScoreColor(avgScore)}>{Math.round(avgScore)}%</span>
-                      </div>
-                      <Progress 
-                        value={avgScore} 
-                        className="h-2" 
-                        indicatorClassName={
-                          avgScore >= 80 ? "bg-career-accent" : 
-                          avgScore >= 70 ? "bg-career-warning" : 
-                          "bg-career-danger"
-                        }
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-  
-  if (!currentQuestion) return null;
-  
-  const isAnswered = currentQuestion && answeredQuestions[currentQuestion.id];
+  useEffect(() => {
+    // Load saved answer when changing questions
+    const previouslyAnswered = findAnsweredQuestion();
+    if (previouslyAnswered) {
+      setAnswer(previouslyAnswered.answer);
+      if (previouslyAnswered.feedback) {
+        setCurrentFeedback(previouslyAnswered.feedback);
+      }
+    } else {
+      setAnswer("");
+      setCurrentFeedback(null);
+    }
+    setFeedbackVisible(!!previouslyAnswered?.feedback);
+  }, [currentQuestionIndex]);
   
   return (
     <DashboardLayout>
       <div className="animate-fade-in">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-career-primary">Answer Practice</h1>
-          <div className="flex items-center">
-            <span className="text-sm text-muted-foreground mr-2">
-              Question {currentIndex + 1} of {questions.length}
-            </span>
-            <div className="flex space-x-1">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={goToPreviousQuestion}
-                disabled={currentIndex === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={goToNextQuestion}
-                disabled={currentIndex === questions.length - 1 && !isAnswered}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-career-primary mb-1">Practice Answers</h1>
+            <p className="text-muted-foreground">
+              Practice answering interview questions and get AI feedback
+            </p>
           </div>
+          {overallScore !== null && (
+            <div className="mt-2 md:mt-0 bg-career-primary/10 p-2 px-4 rounded-full">
+              <div className="flex items-center">
+                <span className="font-medium mr-2">Overall Score:</span>
+                <span className={`font-bold text-lg ${scoreColor(overallScore)}`}>
+                  {overallScore}%
+                </span>
+              </div>
+            </div>
+          )}
         </div>
         
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 bg-career-primary/10 text-career-primary text-xs font-medium rounded">
-                {currentQuestion.category}
-              </span>
-              {isAnswered && (
-                <span className={`px-2 py-1 ${getScoreBadge(answeredQuestions[currentQuestion.id].feedback.score)} text-xs font-medium rounded-full`}>
-                  Score: {answeredQuestions[currentQuestion.id].feedback.score}%
-                </span>
-              )}
+        {questions.length > 0 && currentQuestion ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={goToPreviousQuestion}
+                  disabled={currentQuestionIndex === 0}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Previous
+                </Button>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Question {currentQuestionIndex + 1} of {questions.length}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goToNextQuestion}
+                disabled={currentQuestionIndex === questions.length - 1}
+              >
+                Next
+                <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+              </Button>
             </div>
-            <CardTitle className="text-xl mt-2">{currentQuestion.text}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder="Type your answer here..."
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              className="min-h-[150px]"
-              disabled={isEvaluating || isAnswered}
+            
+            <Progress 
+              value={(currentQuestionIndex + 1) / questions.length * 100} 
+              className="h-2"
             />
             
-            {isEvaluating && (
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Evaluating your answer...</span>
-                  <span className="text-sm font-medium">{Math.round(progress)}%</span>
-                </div>
-                <Progress value={progress} className="h-2" />
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            {!feedback ? (
-              <Button 
-                className="bg-career-primary hover:bg-career-primary/90"
-                onClick={evaluateAnswer}
-                disabled={isEvaluating || !answer.trim() || isAnswered}
-              >
-                {isEvaluating ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Evaluating...
-                  </span>
-                ) : (
-                  <>Evaluate Answer</>
-                )}
-              </Button>
-            ) : (
-              <Button 
-                className="bg-career-primary hover:bg-career-primary/90"
-                onClick={goToNextQuestion}
-                disabled={currentIndex === questions.length - 1 && Object.keys(answeredQuestions).length === questions.length}
-              >
-                {currentIndex === questions.length - 1 && Object.keys(answeredQuestions).length === questions.length ? (
-                  <span className="flex items-center">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    View Results
-                  </span>
-                ) : (
-                  <>Next Question</>
-                )}
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
-        
-        {feedback && (
-          <div className="space-y-4 animate-slide-up">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Answer Evaluation</CardTitle>
-                  <div className={`${getScoreBadge(feedback.score)} px-3 py-1`}>
-                    <span className="font-bold">{feedback.score}%</span>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="px-2 py-1 rounded-full text-xs text-white bg-career-primary inline-block mb-2">
+                      {currentQuestion.category}
+                    </div>
+                    <CardTitle className="text-xl">{currentQuestion.text}</CardTitle>
                   </div>
+                  {answeredQuestion?.feedback && (
+                    <div className={`px-2 py-1 rounded-full text-sm font-bold ${scoreColor(answeredQuestion.feedback.score)}`}>
+                      Score: {answeredQuestion.feedback.score}%
+                    </div>
+                  )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-md font-medium flex items-center mb-2">
-                    <ThumbsUp className="h-4 w-4 text-career-accent mr-2" />
-                    Strengths
-                  </h3>
-                  <ul className="space-y-2">
-                    {feedback.strengths.map((strength, index) => (
-                      <li key={index} className="flex items-start">
-                        <CheckCircle className="h-4 w-4 text-career-accent mr-2 mt-0.5" />
-                        <span className="feedback-positive">{strength}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <div>
-                  <h3 className="text-md font-medium flex items-center mb-2">
-                    <ThumbsDown className="h-4 w-4 text-career-danger mr-2" />
-                    Areas for Improvement
-                  </h3>
-                  <ul className="space-y-2">
-                    {feedback.weaknesses.map((weakness, index) => (
-                      <li key={index} className="flex items-start">
-                        <AlertTriangle className="h-4 w-4 text-career-danger mr-2 mt-0.5" />
-                        <span className="feedback-negative">{weakness}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <div>
-                  <h3 className="text-md font-medium mb-2">Suggestions for Improvement</h3>
-                  <ul className="space-y-2">
-                    {feedback.suggestions.map((suggestion, index) => (
-                      <li key={index} className="flex items-start">
-                        <div className="bg-career-primary text-white rounded-full w-4 h-4 flex items-center justify-center mr-2 mt-0.5">
-                          <span className="text-xs">{index + 1}</span>
-                        </div>
-                        <span>{suggestion}</span>
-                      </li>
-                    ))}
-                  </ul>
+              <CardContent>
+                <div className="space-y-4">
+                  <Textarea
+                    placeholder="Type your answer here..."
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    className="min-h-[150px]"
+                    disabled={isEvaluating}
+                  />
+                  
+                  <div className="flex justify-end">
+                    <Button 
+                      className="bg-career-primary hover:bg-career-primary/90"
+                      onClick={evaluateAnswer}
+                      disabled={isEvaluating || !answer.trim()}
+                    >
+                      {isEvaluating ? 
+                        "Evaluating..." :
+                        answeredQuestion?.feedback ? "Re-evaluate Answer" : "Submit Answer"
+                      }
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
+            
+            {feedbackVisible && currentFeedback && (
+              <Card className="animate-slide-up">
+                <CardHeader>
+                  <CardTitle className="text-xl">AI Feedback</CardTitle>
+                  <CardDescription>
+                    Here's our assessment of your answer
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="strengths">
+                    <TabsList className="grid grid-cols-3 mb-4">
+                      <TabsTrigger value="strengths">Strengths</TabsTrigger>
+                      <TabsTrigger value="improvements">Areas to Improve</TabsTrigger>
+                      <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="strengths" className="space-y-4">
+                      {currentFeedback.strengths.map((strength, index) => (
+                        <div key={index} className="flex">
+                          <ThumbsUp className="h-5 w-5 text-career-accent mr-3 mt-0.5 flex-shrink-0" />
+                          <p>{strength}</p>
+                        </div>
+                      ))}
+                    </TabsContent>
+                    
+                    <TabsContent value="improvements" className="space-y-4">
+                      {currentFeedback.improvements.map((improvement, index) => (
+                        <div key={index} className="flex">
+                          <ThumbsDown className="h-5 w-5 text-career-warning mr-3 mt-0.5 flex-shrink-0" />
+                          <p>{improvement}</p>
+                        </div>
+                      ))}
+                    </TabsContent>
+                    
+                    <TabsContent value="suggestions" className="space-y-4">
+                      {currentFeedback.suggestions.map((suggestion, index) => (
+                        <div key={index} className="flex">
+                          <MessageSquare className="h-5 w-5 text-career-primary mr-3 mt-0.5 flex-shrink-0" />
+                          <p>{suggestion}</p>
+                        </div>
+                      ))}
+                    </TabsContent>
+                  </Tabs>
+                  
+                  <div className="mt-6 pt-4 border-t">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <span className="font-medium mr-2">Score:</span>
+                        <span className={`font-bold text-lg ${scoreColor(currentFeedback.score)}`}>
+                          {currentFeedback.score}%
+                        </span>
+                      </div>
+                      <div>
+                        {currentFeedback.score >= 80 ? (
+                          <div className="flex items-center text-career-accent">
+                            <CheckCircle2 className="h-5 w-5 mr-1" />
+                            <span className="font-medium">Great answer!</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center text-career-warning">
+                            <AlertCircle className="h-5 w-5 mr-1" />
+                            <span className="font-medium">Needs improvement</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground mb-4">
+                No questions available. Please generate questions first.
+              </p>
+              <Button 
+                onClick={() => navigate("/skill-questions")}
+                className="bg-career-primary hover:bg-career-primary/90"
+              >
+                Generate Questions
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        
+        {answeredQuestions.length > 0 && (
+          <div className="mt-8 flex justify-between">
+            <Button 
+              variant="outline" 
+              className="text-career-danger border-career-danger hover:bg-career-danger/10"
+              onClick={resetPractice}
+            >
+              Reset Practice Session
+            </Button>
+            
+            <Button 
+              className="bg-career-primary hover:bg-career-primary/90"
+              onClick={() => navigate("/dashboard")}
+            >
+              <Save className="mr-2 h-4 w-4" /> Save and Return to Dashboard
+            </Button>
           </div>
         )}
       </div>
