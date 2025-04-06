@@ -24,12 +24,16 @@ const ResumeAnalyzer = () => {
       return;
     }
 
-    setResumeData(JSON.parse(storedResumeData));
+    const parsedResumeData = JSON.parse(storedResumeData);
+    setResumeData(parsedResumeData);
 
-    // Check if resume has already been analyzed
-    const storedAnalysis = localStorage.getItem("resumeAnalysis");
+    // Check if this specific resume has already been analyzed
+    const storedAnalysis = localStorage.getItem(`resumeAnalysis_${parsedResumeData.fileName}`);
     if (storedAnalysis) {
       setAnalysisResult(JSON.parse(storedAnalysis));
+    } else {
+      // Clear any previous analysis result when a new resume is loaded
+      setAnalysisResult(null);
     }
   }, [navigate]);
 
@@ -48,19 +52,18 @@ const ResumeAnalyzer = () => {
     }, 300);
 
     try {
-      // In a real app, you would make an API call to analyze the resume
-      // For this demo, we'll analyze the content of the resume
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Clear a small delay to let the UI update
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Actually analyze the resume content
-      const resumeContent = resumeData.content.toLowerCase();
+      // Analyze the specific resume content
+      const resumeContent = resumeData.content;
       
       // Generate analysis based on actual resume content
       const result = generateAnalysisFromContent(resumeContent);
 
-      // Save analysis to localStorage
-      localStorage.setItem("resumeAnalysis", JSON.stringify(result));
-      localStorage.setItem("resumeAnalyzed", "true");
+      // Save analysis to localStorage with a unique key based on the file name
+      // This ensures different resumes get different analyses
+      localStorage.setItem(`resumeAnalysis_${resumeData.fileName}`, JSON.stringify(result));
       
       setAnalysisResult(result);
       toast.success("Resume analysis completed!");

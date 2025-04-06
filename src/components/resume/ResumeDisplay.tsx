@@ -20,6 +20,12 @@ const ResumeDisplay = ({
   onAnalyze, 
   showAnalyzeButton 
 }: ResumeDisplayProps) => {
+  // Function to get a preview of the content
+  const getContentPreview = (content: string, maxLength = 500) => {
+    if (content.length <= maxLength) return content;
+    return `${content.substring(0, maxLength)}...`;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -29,23 +35,21 @@ const ResumeDisplay = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center space-x-4">
-          <div className="bg-career-primary/10 p-3 rounded-full">
+        <div className="flex items-start space-x-4">
+          <div className="bg-career-primary/10 p-3 rounded-full flex-shrink-0 mt-1">
             <FileText className="h-6 w-6 text-career-primary" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="font-medium">{resumeData.fileName}</p>
-            <p className="text-sm text-muted-foreground">
-              {resumeData.content.length > 500 
-                ? `${resumeData.content.substring(0, 500)}...` 
-                : resumeData.content}
-            </p>
+            <div className="mt-2 text-sm text-muted-foreground bg-slate-50 p-3 rounded-md max-h-60 overflow-y-auto">
+              {getContentPreview(resumeData.content)}
+            </div>
           </div>
         </div>
         
         {showAnalyzeButton && (
           <Button
-            className="mt-4 bg-career-primary hover:bg-career-primary/90"
+            className="mt-4 bg-career-primary hover:bg-career-primary/90 w-full sm:w-auto"
             onClick={onAnalyze}
             disabled={isAnalyzing}
           >
@@ -55,7 +59,7 @@ const ResumeDisplay = ({
                 Analyzing Resume...
               </span>
             ) : (
-              <>Analyze Resume</>
+              <>Analyze This Resume</>
             )}
           </Button>
         )}
