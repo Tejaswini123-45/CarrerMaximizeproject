@@ -27,7 +27,13 @@ const ResumeAnalyzer = () => {
 
     try {
       const parsedResumeData = JSON.parse(storedResumeData);
-      console.log("Retrieved resume data:", parsedResumeData);
+      console.log("Retrieved resume data with content length:", parsedResumeData.content?.length || 0);
+      
+      // Verify content is present
+      if (!parsedResumeData.content || parsedResumeData.content.trim().length === 0) {
+        throw new Error("Resume content is empty");
+      }
+      
       setResumeData(parsedResumeData);
 
       // Check if this specific resume has already been analyzed
@@ -40,16 +46,19 @@ const ResumeAnalyzer = () => {
         setAnalysisResult(null);
       }
     } catch (error) {
-      console.error("Error parsing resume data:", error);
-      toast.error("Error loading resume data. Please try uploading again.");
+      console.error("Error processing resume data:", error);
+      toast.error("Error with resume data. Please try uploading again.");
       navigate("/resume-upload");
     }
   }, [navigate]);
 
   const analyzeResume = async () => {
-    if (!resumeData) return;
-    console.log("Analyzing resume with content:", resumeData.content);
-
+    if (!resumeData || !resumeData.content) {
+      toast.error("Cannot analyze: resume content is missing");
+      return;
+    }
+    
+    console.log("Starting resume analysis with content length:", resumeData.content.length);
     setIsAnalyzing(true);
     setProgress(0);
 
@@ -65,9 +74,9 @@ const ResumeAnalyzer = () => {
       // Add a small delay to let the UI update
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Analyze the resume content directly
+      // Analyze the resume content
       const result = generateAnalysisFromContent(resumeData.content);
-      console.log("Analysis result:", result);
+      console.log("Analysis completed successfully, score:", result.score);
 
       // Save analysis to localStorage
       localStorage.setItem(`resumeAnalysis_${resumeData.fileName}`, JSON.stringify(result));

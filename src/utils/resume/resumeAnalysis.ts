@@ -2,6 +2,7 @@
 import { ResumeData, AnalysisResult } from '../types/resumeTypes';
 import { calculateResumeScore } from './scoreCalculation';
 import { generateFeedback } from './feedbackGeneration';
+import { detectSkills } from './skillDetection';
 
 // Main function to analyze resume content
 export const generateAnalysisFromContent = (content: string): AnalysisResult => {
@@ -18,12 +19,22 @@ export const generateAnalysisFromContent = (content: string): AnalysisResult => 
     };
   }
   
+  // For text files, use the content directly
+  const textToAnalyze = content.trim();
+  console.log("Text ready for analysis, length:", textToAnalyze.length);
+  
+  // Detect skills first to verify content processing
+  const { foundTechnicalSkills, foundSoftSkills } = detectSkills(textToAnalyze);
+  console.log("Skills detection complete. Found", 
+    foundTechnicalSkills.length, "technical skills and", 
+    foundSoftSkills.length, "soft skills");
+  
   // Calculate score
-  const score = calculateResumeScore(content);
+  const score = calculateResumeScore(textToAnalyze);
   console.log("Calculated score:", score);
   
   // Generate feedback
-  const feedback = generateFeedback(content, score);
+  const feedback = generateFeedback(textToAnalyze, score);
   console.log("Generated feedback with", 
     feedback.strengths.length, "strengths,", 
     feedback.weaknesses.length, "weaknesses");
