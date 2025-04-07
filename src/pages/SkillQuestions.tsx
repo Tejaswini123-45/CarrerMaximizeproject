@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/layouts/DashboardLayout";
@@ -9,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Save, Sparkles, Check, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
+import { generateQuestions } from "@/utils/resume/questionGeneration";
 
 interface Question {
   id: string;
@@ -44,7 +44,7 @@ const SkillQuestions = () => {
     }
   }, [navigate]);
   
-  const generateQuestions = async () => {
+  const generateInterviewQuestions = async () => {
     if (!resumeContent) return;
     
     setIsGenerating(true);
@@ -59,28 +59,14 @@ const SkillQuestions = () => {
     }, 300);
     
     try {
-      // In a real app, you would make an API call to generate questions
-      // For this demo, we'll simulate with a timeout
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      // Generate questions based on resume content
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
       
-      // Mock generated questions based on common skills
-      const mockQuestions: Question[] = [
-        { id: "q1", text: "Describe a challenging project you worked on and how you overcame obstacles.", category: "Experience" },
-        { id: "q2", text: "How do you approach learning new technologies or methodologies?", category: "Technical" },
-        { id: "q3", text: "Can you provide an example of how you've used data analysis to solve a business problem?", category: "Technical" },
-        { id: "q4", text: "Tell me about a time when you had to collaborate with a difficult team member.", category: "Behavioral" },
-        { id: "q5", text: "How do you prioritize tasks when working on multiple projects with competing deadlines?", category: "Behavioral" },
-        { id: "q6", text: "Explain a situation where you had to make a difficult decision with limited information.", category: "Behavioral" },
-        { id: "q7", text: "How would you approach implementing a new system or process that encounters resistance?", category: "Situational" },
-        { id: "q8", text: "What steps do you take to ensure quality in your work?", category: "Technical" },
-        { id: "q9", text: "How do you stay current with industry trends and developments?", category: "Experience" },
-        { id: "q10", text: "Describe your communication style when working with non-technical stakeholders.", category: "Behavioral" }
-      ];
-      
-      setQuestions(mockQuestions);
+      const generatedQuestions = generateQuestions(resumeContent, 10);
+      setQuestions(generatedQuestions);
       
       // Save to localStorage
-      localStorage.setItem("generatedQuestions", JSON.stringify(mockQuestions));
+      localStorage.setItem("generatedQuestions", JSON.stringify(generatedQuestions));
       localStorage.setItem("questionsGenerated", "true");
       
       toast.success("Interview questions generated successfully!");
@@ -164,7 +150,7 @@ const SkillQuestions = () => {
                 ) : (
                   <Button 
                     className="bg-career-primary hover:bg-career-primary/90"
-                    onClick={generateQuestions}
+                    onClick={generateInterviewQuestions}
                   >
                     <Sparkles className="mr-2 h-4 w-4" /> Generate Questions
                   </Button>
