@@ -25,21 +25,30 @@ const ResumeAnalyzer = () => {
       return;
     }
 
-    const parsedResumeData = JSON.parse(storedResumeData);
-    setResumeData(parsedResumeData);
+    try {
+      const parsedResumeData = JSON.parse(storedResumeData);
+      console.log("Retrieved resume data:", parsedResumeData);
+      setResumeData(parsedResumeData);
 
-    // Check if this specific resume has already been analyzed
-    const storedAnalysis = localStorage.getItem(`resumeAnalysis_${parsedResumeData.fileName}`);
-    if (storedAnalysis) {
-      setAnalysisResult(JSON.parse(storedAnalysis));
-    } else {
-      // Clear any previous analysis result when a new resume is loaded
-      setAnalysisResult(null);
+      // Check if this specific resume has already been analyzed
+      const storedAnalysis = localStorage.getItem(`resumeAnalysis_${parsedResumeData.fileName}`);
+      if (storedAnalysis) {
+        console.log("Using cached analysis");
+        setAnalysisResult(JSON.parse(storedAnalysis));
+      } else {
+        // Clear any previous analysis result when a new resume is loaded
+        setAnalysisResult(null);
+      }
+    } catch (error) {
+      console.error("Error parsing resume data:", error);
+      toast.error("Error loading resume data. Please try uploading again.");
+      navigate("/resume-upload");
     }
   }, [navigate]);
 
   const analyzeResume = async () => {
     if (!resumeData) return;
+    console.log("Analyzing resume with content:", resumeData.content);
 
     setIsAnalyzing(true);
     setProgress(0);
@@ -53,24 +62,21 @@ const ResumeAnalyzer = () => {
     }, 300);
 
     try {
-      // Clear a small delay to let the UI update
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Add a small delay to let the UI update
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Analyze the specific resume content
-      const resumeContent = resumeData.content;
-      
-      // Generate analysis based on actual resume content
-      const result = generateAnalysisFromContent(resumeContent);
+      // Analyze the resume content directly
+      const result = generateAnalysisFromContent(resumeData.content);
+      console.log("Analysis result:", result);
 
-      // Save analysis to localStorage with a unique key based on the file name
-      // This ensures different resumes get different analyses
+      // Save analysis to localStorage
       localStorage.setItem(`resumeAnalysis_${resumeData.fileName}`, JSON.stringify(result));
       
       setAnalysisResult(result);
       toast.success("Resume analysis completed!");
     } catch (error) {
-      toast.error("Failed to analyze resume. Please try again.");
       console.error("Analysis error:", error);
+      toast.error("Failed to analyze resume. Please try again.");
     } finally {
       clearInterval(progressInterval);
       setProgress(100);

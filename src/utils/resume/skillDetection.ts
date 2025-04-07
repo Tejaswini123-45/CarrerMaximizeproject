@@ -26,6 +26,7 @@ export const softSkills = [
 
 // Function to detect skills in resume content
 export const detectSkills = (content: string) => {
+  console.log("Detecting skills in content of length:", content.length);
   const contentLower = content.toLowerCase();
   
   const foundTechnicalSkills = technicalSkills.filter(skill => 
@@ -35,6 +36,9 @@ export const detectSkills = (content: string) => {
   const foundSoftSkills = softSkills.filter(skill => 
     contentLower.includes(skill)
   );
+  
+  console.log("Found technical skills:", foundTechnicalSkills);
+  console.log("Found soft skills:", foundSoftSkills);
   
   return {
     foundTechnicalSkills,
