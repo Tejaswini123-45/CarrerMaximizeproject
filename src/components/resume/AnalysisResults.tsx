@@ -1,11 +1,10 @@
-
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { AnalysisResult } from "@/utils/resumeAnalysis";
+import { AnalysisResult } from "@/utils/types/resumeTypes";
 
 interface AnalysisResultsProps {
   analysisResult: AnalysisResult;

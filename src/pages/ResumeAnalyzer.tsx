@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import { toast } from "sonner";
 
-import { ResumeData, AnalysisResult, generateAnalysisFromContent } from "@/utils/resumeAnalysis";
+import { ResumeData, AnalysisResult } from "@/utils/types/resumeTypes";
+import { generateAnalysisFromContent } from "@/utils/resume/resumeAnalysis";
 import ResumeDisplay from "@/components/resume/ResumeDisplay";
 import AnalysisResults from "@/components/resume/AnalysisResults";
 

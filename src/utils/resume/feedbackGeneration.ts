@@ -1,116 +1,23 @@
 
-export interface ResumeData {
-  fileName: string;
-  content: string;
-  uploadDate: string;
-}
+import { AnalysisResult } from '../types/resumeTypes';
+import { detectSkills, technicalSkills, softSkills } from './skillDetection';
+import { detectAchievements, actionVerbs } from './achievementDetection';
 
-export interface AnalysisResult {
-  strengths: string[];
-  weaknesses: string[];
-  suggestions: string[];
-  score: number;
-  keywords: string[];
-}
-
-// Function to analyze resume content
-export const generateAnalysisFromContent = (content: string): AnalysisResult => {
+// Generate strengths, weaknesses, and suggestions based on resume content
+export const generateFeedback = (content: string, score: number): Pick<AnalysisResult, 'strengths' | 'weaknesses' | 'suggestions' | 'keywords'> => {
   const contentLower = content.toLowerCase();
   const words = contentLower.split(/\s+/);
   const wordCount = words.length;
   
-  // Extract skills from content (expanded skills list for better matching)
-  const technicalSkills = [
-    "javascript", "typescript", "react", "node", "html", "css", "python", 
-    "java", "c#", "php", "sql", "nosql", "mongodb", "aws", "azure", "docker",
-    "kubernetes", "git", "agile", "scrum", "rest", "graphql", "redux", "vue",
-    "angular", "express", "django", "flask", "spring", "ruby", "rails",
-    "swift", "kotlin", "flutter", "react native", "android", "ios", "mobile",
-    "jquery", "bootstrap", "tailwind", "sass", "less", "webpack", "vite",
-    "cypress", "jest", "mocha", "chai", "testing", "ci/cd", "jenkins",
-    "aws lambda", "serverless", "microservices", "architecture", "devops",
-    "data science", "machine learning", "ai", "tensorflow", "pytorch", "nlp",
-    "hadoop", "spark", "kafka", "redis", "elasticsearch", "firebase", "gcp"
-  ];
-  
-  const softSkills = [
-    "leadership", "communication", "teamwork", "problem solving", "critical thinking",
-    "adaptability", "creativity", "time management", "collaboration", "presentation",
-    "management", "organization", "attention to detail", "analytical", "mentoring",
-    "coaching", "project management", "stakeholder management", "decision making",
-    "conflict resolution", "negotiation", "emotional intelligence", "strategic thinking",
-    "prioritization", "resourcefulness", "self-motivated", "proactive", "customer service",
-    "interpersonal", "verbal communication", "written communication", "multitasking",
-    "training", "delegation", "accountability", "flexibility", "innovation", "perseverance"
-  ];
-  
-  // Find all matches in the resume
-  const foundTechnicalSkills = technicalSkills.filter(skill => 
-    contentLower.includes(skill)
-  );
-  
-  const foundSoftSkills = softSkills.filter(skill => 
-    contentLower.includes(skill)
-  );
-  
-  // Calculate base score
-  let score = 60;
-  
-  // Check for quantifiable achievements
-  const achievementPatterns = [
-    /\d+%/i,                      // Percentages
-    /\d+x/i,                      // Multipliers
-    /\$\d+[k|K|m|M]?/i,           // Dollar amounts
-    /increased (by )?\d+/i,       // Increases
-    /reduced (by )?\d+/i,         // Reductions
-    /improved (by )?\d+/i         // Improvements
-  ];
-  
-  const achievementMatches = achievementPatterns.filter(pattern => 
-    pattern.test(content)
-  ).length;
-  
-  // Add score based on achievements
-  score += Math.min(15, achievementMatches * 3);
-  
-  // Check for action verbs
-  const actionVerbs = [
-    "achieved", "improved", "trained", "managed", "created", "reduced", 
-    "increased", "negotiated", "launched", "developed", "implemented", 
-    "designed", "led", "resolved", "streamlined"
-  ];
-  
-  const actionVerbMatches = actionVerbs.filter(verb => 
-    contentLower.includes(verb)
-  ).length;
-  
-  // Add score based on action verbs
-  score += Math.min(10, actionVerbMatches * 2);
-  
-  // Check for technical skills
-  score += Math.min(15, foundTechnicalSkills.length * 2);
-  
-  // Check for soft skills
-  score += Math.min(10, foundSoftSkills.length * 2);
-  
-  // Check resume length - too short or too long affects score
-  if (wordCount < 200) {
-    score -= 10;
-  } else if (wordCount > 800) {
-    score -= 5;
-  }
+  // Get skills and achievements
+  const { foundTechnicalSkills, foundSoftSkills } = detectSkills(content);
+  const { achievementMatches, actionVerbMatches } = detectAchievements(content);
   
   // Check for contact information
   const hasEmail = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/i.test(content);
   const hasPhone = /\b(?:\+\d{1,3}[-\s]?)?\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{4}\b/i.test(content);
   
-  if (hasEmail && hasPhone) {
-    score += 5;
-  } else if (!hasEmail && !hasPhone) {
-    score -= 5;
-  }
-  
-  // Generate strengths based on actual content
+  // Generate strengths
   const strengths = [];
   
   if (foundTechnicalSkills.length > 0) {
@@ -138,7 +45,7 @@ export const generateAnalysisFromContent = (content: string): AnalysisResult => 
     strengths.push("Resume provides basic professional information");
   }
   
-  // Generate weaknesses based on actual content
+  // Generate weaknesses
   const weaknesses = [];
   
   if (wordCount < 200) {
@@ -173,7 +80,7 @@ export const generateAnalysisFromContent = (content: string): AnalysisResult => 
     weaknesses.push("Professional summary could be more tailored");
   }
   
-  // Generate suggestions based on actual content
+  // Generate suggestions
   const suggestions = [];
   
   if (achievementMatches < 3) {
@@ -211,11 +118,9 @@ export const generateAnalysisFromContent = (content: string): AnalysisResult => 
     suggestions.push("Have a colleague or professional review your resume for feedback");
   }
   
-  // Recommended keywords - mix of found skills and relevant missing ones
-  let recommendedKeywords = [];
-  
+  // Generate recommended keywords
   // Start with skills found in the resume
-  recommendedKeywords = [...foundTechnicalSkills.slice(0, 5), ...foundSoftSkills.slice(0, 3)];
+  let recommendedKeywords = [...foundTechnicalSkills.slice(0, 5), ...foundSoftSkills.slice(0, 3)];
   
   // Add missing but relevant skills
   const missingTechnicalSkills = technicalSkills
@@ -228,15 +133,13 @@ export const generateAnalysisFromContent = (content: string): AnalysisResult => 
   
   recommendedKeywords = [...recommendedKeywords, ...missingTechnicalSkills, ...missingSoftSkills];
   
-  // Ensure we have a good mix but don't go over 12 keywords
+  // Ensure we have a good mix but don't go over 10 keywords
   recommendedKeywords = [...new Set(recommendedKeywords)].slice(0, 10);
   
-  // Return analysis result
   return {
     strengths: strengths.slice(0, 4),
     weaknesses: weaknesses.slice(0, 4),
     suggestions: suggestions.slice(0, 5),
-    score: Math.min(98, Math.max(50, Math.round(score))), // Keep score between 50-98
     keywords: recommendedKeywords
   };
 };

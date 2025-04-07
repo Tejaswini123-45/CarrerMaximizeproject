@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { FileText, Loader2 } from "lucide-react";
-import { ResumeData } from "@/utils/resumeAnalysis";
+import { ResumeData } from "@/utils/types/resumeTypes";
 
 interface ResumeDisplayProps {
   resumeData: ResumeData;
